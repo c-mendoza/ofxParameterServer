@@ -12,7 +12,80 @@
 #include <unordered_map>
 #include <typeindex>
 
-class ServerMethod;
+class ofxParameterServer;
+
+class ServerMethod
+{
+public:
+    ServerMethod(std::string ident,
+                 std::string uiName,
+                 std::function<void(ServerMethod&, ofxOscMessage&, ofxParameterServer&)> action)
+    {
+        identifier = ident;
+        this->action = action;
+        this->uiName = uiName;
+    }
+
+    struct Argument
+    {
+        std::string identifier;
+        std::string info;
+        std::string type;
+        std::string value;
+    };
+
+    void addArgument(Argument& arg)
+    {
+        arguments.push_back(arg);
+    }
+
+    void execute(ofxOscMessage& message, ofxParameterServer& server)
+    {
+        action(*this, message, server);
+    }
+
+
+protected:
+    /**
+     * @brief The name of the method, used for calling its action.
+     * This name needs to be legal for use as an OSC path.
+     */
+    std::string identifier;
+
+    /**
+     * @brief A friendlier name that is used in the mobile UI. For the moment this name
+     * is used by buttons. The convention is to start with a capital letter and
+     * use regular spaces for multiple words:
+     * yes:  Create mask
+     * no:   createMask
+     */
+    std::string uiName;
+
+    /**
+    * @brief The action that the method performs once called. The function parameters
+    * are:
+    * ServerMethod&: A reference to the ServerMethod that called this action.
+    * ofxOscMessage&: A reference to the OSC Message that called this method.
+    * ModelServer&: A reference to the ofxParameterServer that received the message and
+    * dispatched the method.
+    **/
+    std::function<void(ServerMethod&, ofxOscMessage&, ofxParameterServer&)> action;
+
+    std::vector<Argument> arguments;
+public:
+    const std::string& getIdentifier() const
+    {
+        return identifier;
+    }
+
+    const std::string& getUiName() const
+    {
+        return uiName;
+    }
+
+protected:
+
+};
 
 /**
  * @brief Types are deserialized by OF with ofFromString, which calls the << operator
@@ -151,78 +224,6 @@ private:
 	std::mutex serverMutex;
 };
 
-class ServerMethod
-{
-public:
-	ServerMethod(std::string ident,
-				 std::string uiName,
-				 std::function<void(ServerMethod&, ofxOscMessage&, ofxParameterServer&)> action)
-	{
-		identifier = ident;
-		this->action = action;
-		this->uiName = uiName;
-	}
-
-	struct Argument
-	{
-		std::string identifier;
-		std::string info;
-		std::string type;
-		std::string value;
-	};
-
-	void addArgument(Argument& arg)
-	{
-		arguments.push_back(arg);
-	}
-
-	void execute(ofxOscMessage& message, ofxParameterServer& server)
-	{
-		action(*this, message, server);
-	}
-
-
-protected:
-	/**
-	 * @brief The name of the method, used for calling its action.
-	 * This name needs to be legal for use as an OSC path.
-	 */
-	std::string identifier;
-
-	/**
-	 * @brief A friendlier name that is used in the mobile UI. For the moment this name
-	 * is used by buttons. The convention is to start with a capital letter and
-	 * use regular spaces for multiple words:
-	 * yes:  Create mask
-	 * no:   createMask
-	 */
-	std::string uiName;
-
-	/**
-	* @brief The action that the method performs once called. The function parameters
-	* are:
-	* ServerMethod&: A reference to the ServerMethod that called this action.
-	* ofxOscMessage&: A reference to the OSC Message that called this method.
-	* ModelServer&: A reference to the ofxParameterServer that received the message and
-	* dispatched the method.
-	**/
-	std::function<void(ServerMethod&, ofxOscMessage&, ofxParameterServer&)> action;
-
-	std::vector<Argument> arguments;
-public:
-	const std::string& getIdentifier() const
-	{
-		return identifier;
-	}
-
-	const std::string& getUiName() const
-	{
-		return uiName;
-	}
-
-protected:
-
-};
 
 //std::ostream& operator<<(std::ostream& os, const ofPath& path);
 //std::istream& operator>>(std::istream& is, ofPath& path);
