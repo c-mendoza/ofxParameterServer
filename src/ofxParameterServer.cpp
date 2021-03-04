@@ -58,7 +58,7 @@ ofxParameterServer::ofxParameterServer() : ofThread()
 			"Save",
 			[this](ServerMethod& method, ofxOscMessage& m, ofxParameterServer& server)
 			{
-				MTApp::sharedApp->save();
+				MTApp::Instance()->save();
 				ofxOscMessage outMessage;
 				outMessage.addStringArg("OK");
 				server.sendReply(method, outMessage);
@@ -68,7 +68,7 @@ ofxParameterServer::ofxParameterServer() : ofThread()
 			"Revert",
 			[this](ServerMethod& method, ofxOscMessage& m, ofxParameterServer& server)
 			{
-				MTApp::sharedApp->revert();
+				MTApp::Instance()->revert();
 				ofxOscMessage outMessage;
 				outMessage.addStringArg("OK");
 				server.sendReply(method, outMessage);
@@ -114,7 +114,7 @@ void ofxParameterServer::setup(ofParameterGroup& parameters,
 	this->inPort = inPort;
 	this->outPort = outPort;
 
-	modelLoadedListener = MTApp::sharedApp->modelLoadedEvent.newListener([this](ofEventArgs& args)
+	modelLoadedListener = MTApp::Instance()->modelLoadedEvent.newListener([this](ofEventArgs& args)
 																   {
 																	   auto xml = createMetaModel();
 																	   //TODO: Delete this when releasing
