@@ -4,9 +4,6 @@
 
 #include "ofxParameterServer.hpp"
 
-#include "MTApp.hpp"
-#include "MTModel.hpp"
-
 //const std::string ModelRemoteController::ApiRoot = "mtafMethod";
 
 ofxParameterServer::ofxParameterServer() : ofThread()
@@ -53,26 +50,7 @@ ofxParameterServer::ofxParameterServer() : ofThread()
 				parameterThreadChannel.send(std::move(pd));
 //				setParameter(m.getArgAsString(0), m.getArgAsString(1));
 			}));
-	addServerMethod(ServerMethod(
-			"save",
-			"Save",
-			[this](ServerMethod& method, ofxOscMessage& m, ofxParameterServer& server)
-			{
-				MTApp::Instance()->save();
-				ofxOscMessage outMessage;
-				outMessage.addStringArg("OK");
-				server.sendReply(method, outMessage);
-			}));
-	addServerMethod(ServerMethod(
-			"revert",
-			"Revert",
-			[this](ServerMethod& method, ofxOscMessage& m, ofxParameterServer& server)
-			{
-				MTApp::Instance()->revert();
-				ofxOscMessage outMessage;
-				outMessage.addStringArg("OK");
-				server.sendReply(method, outMessage);
-			}));
+
 
 	// We can add here any value that OF has an ofToString for.
 	// Any other types you'll need to add externally
@@ -114,13 +92,6 @@ void ofxParameterServer::setup(ofParameterGroup& parameters,
 	this->inPort = inPort;
 	this->outPort = outPort;
 
-	modelLoadedListener = MTApp::Instance()->modelLoadedEvent.newListener([this](ofEventArgs& args)
-																   {
-																	   auto xml = createMetaModel();
-																	   //TODO: Delete this when releasing
-																	   xml.save("metamodel.xml");
-																   });
-
 	// Todo:
 	// Add a listener to all parameters so that when any of them updates we
 	// can send the updated model to the OSC Remote
@@ -136,7 +107,7 @@ void ofxParameterServer::setup(ofParameterGroup& parameters,
 }
 
 /**
- * @brief The server's setParameter method needs to be called on the main thread to avoid data races, which is achieved
+ * @brief The server's setParameter method needs to be called on the main thread, which is achieved
  * by calling ofxParameterServer::update().
  */
 void ofxParameterServer::update()
@@ -200,7 +171,7 @@ void ofxParameterServer::serializeParameter(std::shared_ptr<ofAbstractParameter>
 	}
 	catch (std::out_of_range e)
 	{
-		ofLogError("ModelServer") << "Tried adding parameter of unknown type: "
+		ofLogNotice("ModelServer") << "Tried adding parameter of unknown type: "
 								  << typeid(*parameter).name()
 								  << " Register the type with addType before adding such a parameter.";
 		return;
@@ -318,7 +289,7 @@ ofxParameterServer::findParamWithEscapedName(ofParameterGroup& groupToSearch, st
 {
 	auto iter = std::find_if(groupToSearch.begin(),
 							 groupToSearch.end(),
-							 [&escapedName](shared_ptr<ofAbstractParameter> param)
+							 [&escapedName](std::shared_ptr<ofAbstractParameter> param)
 							 {
 								 if (param->getEscapedName() == escapedName)
 								 {

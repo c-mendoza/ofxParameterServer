@@ -187,7 +187,6 @@ private:
 	ofxOscSender oscSender;
 	ofxOscReceiver oscReceiver;
 	std::shared_ptr<ofParameterGroup> group;
-	std::unique_ptr<of::priv::AbstractEventToken> modelLoadedListener;
 	std::unique_ptr<of::priv::AbstractEventToken> loopListener;
 
 	/// {type hash code, type friendly name}
