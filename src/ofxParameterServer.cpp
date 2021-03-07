@@ -6,6 +6,14 @@
 
 //const std::string ModelRemoteController::ApiRoot = "mtafMethod";
 
+const std::string ofxParameterServer::ModuleName = "ofxParameterServer";
+const std::string ofxParameterServer::AttributeName_UiName = "uiName";
+const std::string ofxParameterServer::AttributeName_Name = "name";
+const std::string ofxParameterServer::AttributeName_Type = "type";
+const std::string ofxParameterServer::NodeName_Value = "value";
+const std::string ofxParameterServer::NodeName_Min = "min";
+const std::string ofxParameterServer::NodeName_Max = "max";
+
 ofxParameterServer::ofxParameterServer() : ofThread()
 {
 	ipAddress = "";
@@ -40,7 +48,7 @@ ofxParameterServer::ofxParameterServer() : ofThread()
 			{
 				if (m.getNumArgs() != 2)
 				{
-					ofLogError("ModelServer")
+					ofLogError(ModuleName)
 							<< "Tried to set parameter but OSC Message did not have the right number of arguments.";
 					return;
 				}
@@ -71,7 +79,7 @@ ofxParameterServer::ofxParameterServer() : ofThread()
 
 	// Add ofParameterGroup "manually" because we don't want it boxed into an ofParameter:
 	auto result = typeRegistry
-			.insert({std::type_index(typeid(ofParameterGroup)), {.friendlyName = "group", .hasLimits = false}});
+			.insert({std::type_index(typeid(ofParameterGroup)), {.name = "group", .hasLimits = false}});
 
 }
 
@@ -83,7 +91,6 @@ ofxParameterServer::~ofxParameterServer()
 }
 
 void ofxParameterServer::setup(ofParameterGroup& parameters,
-							   std::string remoteHost,
 							   int inPort,
 							   int outPort)
 {
@@ -131,7 +138,7 @@ void ofxParameterServer::update()
 ofXml ofxParameterServer::createMetaModel()
 {
 	ofXml xml;
-	auto root = xml.appendChild("ParameterServer");
+	auto root = xml.appendChild(ModuleName);
 	auto paramsXml = root.appendChild("Parameters");
 	serializeParameterGroup(group, paramsXml);
 	auto methodsXml = root.appendChild("Methods");
@@ -144,15 +151,15 @@ void ofxParameterServer::serializeMethods(ofXml& xml)
 	for (auto& pair : serverMethods)
 	{
 		xml.appendChild(pair.second.getIdentifier())
-		   .setAttribute("uiName", pair.second.getUiName());
+		   .setAttribute(AttributeName_UiName, pair.second.getUiName());
 	}
 }
 
 void ofxParameterServer::serializeParameterGroup(std::shared_ptr<ofParameterGroup> params, ofXml& xml)
 {
 	auto groupXml = xml.appendChild(params->getEscapedName());
-	groupXml.appendAttribute("type").set("group"); // TODO: type string constants?
-	groupXml.appendAttribute("name").set(params->getName());
+	groupXml.appendAttribute(AttributeName_Type).set("group"); // TODO: type string constants?
+	groupXml.appendAttribute(AttributeName_Name).set(params->getName());
 	for (auto& param : *params)
 	{
 		serializeParameter(param, groupXml);
@@ -171,7 +178,7 @@ void ofxParameterServer::serializeParameter(std::shared_ptr<ofAbstractParameter>
 	}
 	catch (std::out_of_range e)
 	{
-		ofLogNotice("ModelServer") << "Tried adding parameter of unknown type: "
+		ofLogNotice(ModuleName) << "Tried adding parameter of unknown type: "
 								  << typeid(*parameter).name()
 								  << " Register the type with addType before adding such a parameter.";
 		return;
@@ -193,13 +200,13 @@ void ofxParameterServer::serializeParameter(std::shared_ptr<ofAbstractParameter>
 		max = limits.second;
 	}
 
-	paramXml.appendAttribute("type").set(typeInfo.friendlyName);
-	paramXml.appendAttribute("name").set(parameter->getName());
-	paramXml.appendChild("value").set(parameter->toString());
+	paramXml.appendAttribute(AttributeName_Type).set(typeInfo.name);
+	paramXml.appendAttribute(AttributeName_Name).set(parameter->getName());
+	paramXml.appendChild(NodeName_Value).set(parameter->toString());
 	if (min != max)
 	{
-		paramXml.appendChild("min").set(min);
-		paramXml.appendChild("max").set(max);
+		paramXml.appendChild(NodeName_Min).set(min);
+		paramXml.appendChild(NodeName_Max).set(max);
 	}
 
 }
@@ -214,7 +221,7 @@ void ofxParameterServer::setParameter(std::string path, std::string value)
 	auto pathComponents = ofSplitString(path, "/", true, true);
 	if (pathComponents.size() < 2)
 	{
-		ofLogError("ModelServer::setParameter") << "setParameter: path is too short. Path: "
+		ofLogError(ModuleName) << "setParameter: path is too short. Path: "
 												<< path;
 		return;
 	}
@@ -225,7 +232,7 @@ void ofxParameterServer::setParameter(std::string path, std::string value)
 
 	if (current->getEscapedName() != pathComponents[0])
 	{
-		ofLogError("ModelServer::setParameter") << "Something went wrong";
+		ofLogError(ModuleName) << "setParameter: " << "Something went wrong getting a pathComponent.";
 		return;
 	}
 
@@ -246,7 +253,7 @@ void ofxParameterServer::setParameter(std::string path, std::string value)
 		}
 		else
 		{
-			ofLogVerbose("ModelServer::setParameter")
+			ofLogVerbose(ModuleName) << "setParameter: "
 					<< "Couldn't find parameter group. Trying custom deserializer";
 			// Try a custom deserializer here?
 			useCustomDeserializer(path, value);
@@ -278,7 +285,7 @@ bool ofxParameterServer::useCustomDeserializer(const std::string& path, const st
 	}
 	else
 	{
-		ofLogError("ModelServer::setParameter") << "Couldn't deserialize parameter: "
+		ofLogError(ModuleName) << "setParameter Couldn't deserialize parameter: "
 												<< path << "/" << value;
 		return false;
 	}
@@ -314,11 +321,11 @@ bool ofxParameterServer::sendMetaModel()
 
 void ofxParameterServer::parseMessage(ofxOscMessage& m)
 {
-	ofLogVerbose("ofxParameterServer") << "address = " << m.getAddress() << "\n";
-	ofLogVerbose("ofxParameterServer") << "arg = " << m.getArgAsString(0) << "\n";
+	ofLogVerbose(ModuleName) << "address = " << m.getAddress();
+	ofLogVerbose(ModuleName) << "arg = " << m.getArgAsString(0);
 	for (int i = 0; i < m.getNumArgs(); i++)
 	{
-		ofLogVerbose("ofxParameterServer") << "arg " << i << " = " << m.getArgAsString(i) << "\n";
+		ofLogVerbose("ofxParameterServer") << "arg " << i << " = " << m.getArgAsString(i);
 	}
 
 	auto components = ofSplitString(m.getAddress(),
@@ -327,7 +334,7 @@ void ofxParameterServer::parseMessage(ofxOscMessage& m)
 									true);
 	for (int j = 0; j < components.size(); ++j)
 	{
-		ofLogVerbose("ofxParameterServer") << j << " " << components[j] << "\n";
+		ofLogVerbose(ModuleName) << j << " " << components[j];
 	}
 
 	if (components.size() < 3) return;
@@ -367,7 +374,7 @@ void ofxParameterServer::sendMessage(ofxOscMessage& m)
 void ofxParameterServer::sendReply(ServerMethod& method, ofxOscMessage& m)
 {
 	m.setAddress("/" + ApiResponse + "/" + method.getIdentifier());
-	ofLogVerbose("Sending:") << m;
+	ofLogVerbose(ModuleName) << "Sending: " << m;
 	oscSender.sendMessage(m, false);
 }
 

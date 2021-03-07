@@ -12,91 +12,95 @@
 #include <unordered_map>
 #include <typeindex>
 
-class ofxParameterServer;
-
-class ServerMethod
-{
-public:
-    ServerMethod(std::string ident,
-                 std::string uiName,
-                 std::function<void(ServerMethod&, ofxOscMessage&, ofxParameterServer&)> action)
-    {
-        identifier = ident;
-        this->action = action;
-        this->uiName = uiName;
-    }
-
-    struct Argument
-    {
-        std::string identifier;
-        std::string info;
-        std::string type;
-        std::string value;
-    };
-
-    void addArgument(Argument& arg)
-    {
-        arguments.push_back(arg);
-    }
-
-    void execute(ofxOscMessage& message, ofxParameterServer& server)
-    {
-        action(*this, message, server);
-    }
-
-
-protected:
-    /**
-     * @brief The name of the method, used for calling its action.
-     * This name needs to be legal for use as an OSC path.
-     */
-    std::string identifier;
-
-    /**
-     * @brief A friendlier name that is used in the mobile UI. For the moment this name
-     * is used by buttons. The convention is to start with a capital letter and
-     * use regular spaces for multiple words:
-     * yes:  Create mask
-     * no:   createMask
-     */
-    std::string uiName;
-
-    /**
-    * @brief The action that the method performs once called. The function parameters
-    * are:
-    * ServerMethod&: A reference to the ServerMethod that called this action.
-    * ofxOscMessage&: A reference to the OSC Message that called this method.
-    * ModelServer&: A reference to the ofxParameterServer that received the message and
-    * dispatched the method.
-    **/
-    std::function<void(ServerMethod&, ofxOscMessage&, ofxParameterServer&)> action;
-
-    std::vector<Argument> arguments;
-public:
-    const std::string& getIdentifier() const
-    {
-        return identifier;
-    }
-
-    const std::string& getUiName() const
-    {
-        return uiName;
-    }
-
-protected:
-
-};
-
 /**
  * @brief Types are deserialized by OF with ofFromString, which calls the << operator
  */
 class ofxParameterServer : public ofThread
 {
 public:
+
+	static const std::string ModuleName;
+	static const std::string AttributeName_UiName;
+	static const std::string AttributeName_Name;
+	static const std::string AttributeName_Type;
+	static const std::string NodeName_Value;
+	static const std::string NodeName_Min;
+	static const std::string NodeName_Max;
+
+	class ServerMethod
+	{
+	public:
+		ServerMethod(std::string ident,
+					 std::string uiName,
+					 std::function<void(ServerMethod&, ofxOscMessage&, ofxParameterServer&)> action)
+		{
+			identifier = ident;
+			this->action = action;
+			this->uiName = uiName;
+		}
+
+		struct Argument
+		{
+			std::string identifier;
+			std::string info;
+			std::string type;
+			std::string value;
+		};
+
+		void addArgument(Argument& arg)
+		{
+			arguments.push_back(arg);
+		}
+
+		void execute(ofxOscMessage& message, ofxParameterServer& server)
+		{
+			action(*this, message, server);
+		}
+
+
+	protected:
+		/**
+		 * @brief The name of the method, used for calling its action.
+		 * This name needs to be legal for use as an OSC path.
+		 */
+		std::string identifier;
+
+		/**
+		 * @brief A friendlier name that is used in the mobile UI. For the moment this name
+		 * is used by buttons. The convention is to start with a capital letter and
+		 * use regular spaces for multiple words:
+		 * yes:  Create mask
+		 * no:   createMask
+		 */
+		std::string uiName;
+
+		/**
+		* @brief The action that the method performs once called. The function parameters
+		* are:
+		* ServerMethod&: A reference to the ServerMethod that called this action.
+		* ofxOscMessage&: A reference to the OSC Message that called this method.
+		* ModelServer&: A reference to the ofxParameterServer that received the message and
+		* dispatched the method.
+		**/
+		std::function<void(ServerMethod&, ofxOscMessage&, ofxParameterServer&)> action;
+
+		std::vector<Argument> arguments;
+	public:
+		const std::string& getIdentifier() const
+		{
+			return identifier;
+		}
+
+		const std::string& getUiName() const
+		{
+			return uiName;
+		}
+
+	};
+
 	ofxParameterServer();
 	~ofxParameterServer();
 	void setup(ofParameterGroup& parameters,
-			   std::string ipAddress,
 			   int inPort = 12000,
 			   int outPort = 12001);
 	void threadedFunction();
@@ -110,9 +114,9 @@ public:
 	struct TypeInfo
 	{
 		/**
-		 * @brief The friendly name for the type
+		 * @brief The human-readable name for the type. It will be wrapped by an ofParameter
 		 */
-		std::string friendlyName;
+		std::string name;
 		/**
 		 * @brief Set to true if the ofParameter has a minimum and maximum
 		 */
@@ -136,10 +140,10 @@ public:
 	};
 
 	template<typename ParameterType>
-	void addParameterType(std::string friendlyName, bool hasLimits = false)
+	void addParameterType(std::string typeName, bool hasLimits = false)
 	{
 		TypeInfo info;
-		info.friendlyName = friendlyName;
+		info.name = typeName;
 		info.hasLimits = hasLimits;
 		if (hasLimits)
 		{
@@ -173,6 +177,7 @@ public:
 		std::string parameterValue;
 	};
 
+	void syncParameters();
 
 private:
 	ofXml createMetaModel();
